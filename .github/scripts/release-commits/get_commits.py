@@ -10,7 +10,10 @@ def get_version(latest_realease_url):
 
 def get_commits():
     tag = get_version("https://api.github.com/repos/Checkmarx/kics/releases/latest")
-    commits_url = "https://api.github.com/repos/Checkmarx/kics/compare/" + tag + "...master"
+    commits_url = (
+        f"https://api.github.com/repos/Checkmarx/kics/compare/{tag}...master"
+    )
+
 
     contributors = []
 
@@ -28,7 +31,7 @@ def get_commits():
 
             if not is_checkmarx_member(author):
                 contributors.append(author)
-                message = message + " by " + author
+                message = f"{message} by {author}"
 
             print(message)
 
@@ -50,11 +53,7 @@ def is_checkmarx_member(member):
         "@rafaela-soares"
     ]
 
-    for cx in cxMembers:
-        if cx == member:
-            return True
-
-    return False
+    return member in cxMembers
 
 if __name__ == "__main__":
     get_commits()
