@@ -55,20 +55,23 @@ separator = '='*10
 
 print('{separator} Getting Modules {separator}'.format(separator=separator))
 while next_value:
-  print('- Retrieving offset = {}'.format(offset))
-  response = requests.get('{}?limit=100&provider={}&offset={}&verified=true'.format(terraform_url, provider, str(offset)))
+  print(f'- Retrieving offset = {offset}')
+  response = requests.get(
+      f'{terraform_url}?limit=100&provider={provider}&offset={str(offset)}&verified=true'
+  )
   res_json = response.json()
   next_value = 'next_offset' in res_json['meta']
   offset += 100
-  for module in res_json['modules']:
-    modules_list.append({'id': module['id'], 'name': module['name']})
-
+  modules_list.extend({
+      'id': module['id'],
+      'name': module['name']
+  } for module in res_json['modules'])
 print('{separator} Finished Getting Modules {separator}'.format(separator=separator))
 print('\n{separator} Getting Modules Infos {separator}'.format(separator=separator))
 module_info_dict = {}
 for module in modules_list:
-  print('- Retrieving module = {}'.format(module['id']))
-  response = requests.get('{}/{}'.format(terraform_url, module['id']))
+  print(f"- Retrieving module = {module['id']}")
+  response = requests.get(f"{terraform_url}/{module['id']}")
   module_info = {'inputs': [], 'resources': []}
   res_json = response.json()
 
@@ -79,18 +82,18 @@ for module in modules_list:
     gather_module_info = get_module_info(submodule)
     # module_info['inputs'].append(gather_module_info['inputs'])
     module_info['resources'].append(gather_module_info['resources'])
-  module_name = '{}/{}/{}'.format(res_json['namespace'], res_json['name'], res_json['provider'])
-  module_info_dict[module_name] = {}
-  # flatten list process
-  for key in module_info:
-    module_info_dict[module_name][key] = [item for sublist in module_info[key] for item in sublist]
-
+  module_name = (
+      f"{res_json['namespace']}/{res_json['name']}/{res_json['provider']}")
+  module_info_dict[module_name] = {
+      key: [item for sublist in module_info[key] for item in sublist]
+      for key in module_info
+  }
 print('{separator} Finished Getting Modules Infos {separator}'.format(separator=separator))
 print('\n{separator} Creating and JSON {separator}'.format(separator=separator))
 
 new_modules_json = {}
 for module_key_name, module_values in module_info_dict.items():
-  print('- Generating change Dict "{}"'.format(module_key_name))
+  print(f'- Generating change Dict "{module_key_name}"')
   new_modules_json[module_key_name] = {'resources': [], 'inputs': {}}
   for key, value in module_values.items():
     if key == 'inputs':
@@ -107,22 +110,23 @@ with open(commons_json) as json_file:
   current_modules_json = data['common_lib']['modules']['aws']
 changes = {'Added': [], 'Updated': []}
 
-for new_module in new_modules_json:
+for new_module, value_ in new_modules_json.items():
   if new_module not in current_modules_json:
-    changes['Added'].append('Module {} added'.format(new_module))
+    changes['Added'].append(f'Module {new_module} added')
     current_modules_json[new_module] = new_modules_json[new_module]
     continue
-  if current_modules_json[new_module] == new_modules_json[new_module]:
+  if current_modules_json[new_module] == value_:
     for new_resource in new_modules_json[new_module]['resources']:
       if new_resource not in current_modules_json[new_module]['resources']:
         current_modules_json[new_module]['resources'].append(new_resource)
-        changes['Updated'].append('Resource {} added to Module {}'.format(new_resource, new_module))
+        changes['Updated'].append(
+            f'Resource {new_resource} added to Module {new_module}')
     for new_input in new_modules_json[new_module]['inputs']:
       if new_input not in current_modules_json[new_module]['inputs']:
         current_modules_json[new_module]['inputs'][new_input] = new_input
-        changes['Updated'].append('Input {} added to Module {}'.format(new_input, new_module))
+        changes['Updated'].append(f'Input {new_input} added to Module {new_module}')
 
-changes['Updated'].append('Input {} added to Module {}'.format('new_input', 'new_module'))
+changes['Updated'].append('Input new_input added to Module new_module')
 
 if len(changes['Updated']) == 0 and len(changes['Added']) == 0:
   print('{separator} There are no changes {separator}'.format(separator=separator))
@@ -168,7 +172,7 @@ for email in email_distribution_list:
     print(e)
     error_sending.append(f"error sending email to {email} \n error :: {e}")
 
-if len(error_sending) > 0:
+if error_sending:
   print("### ERRORS SENDING EMAILS ###")
   send_email('rogerio.peixoto@checkmarx.com',
               'Terraform Module Update', '</br>'.join(error_sending))

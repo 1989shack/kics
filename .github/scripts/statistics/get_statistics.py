@@ -50,8 +50,15 @@ def get_github_downloads(releases_url):
     gh_resp = requests.get(releases_url)
     if gh_resp.status_code == 200:
         response_body = gh_resp.json()
-        all_github_downloads = sum([item for sublist in [[asset['download_count'] for asset in release['assets']]
-                                                         for release in response_body] for item in sublist])
+        all_github_downloads = sum(
+            item
+            for sublist in [
+                [asset['download_count'] for asset in release['assets']]
+                for release in response_body
+            ]
+            for item in sublist
+        )
+
 
     return all_github_downloads
 
@@ -75,8 +82,8 @@ def get_info_from_repo(repo_url):
 
 def get_relevant_issues_info():
     base_url = "https://api.github.com/search/issues?q=repo:Checkmarx/kics+type:"
-    bug_open = base_url + "issue+state:open+label:bug"
-    bug_closed = base_url + "issue+state:closed+label:bug"
+    bug_open = f"{base_url}issue+state:open+label:bug"
+    bug_closed = f"{base_url}issue+state:closed+label:bug"
     feature_request_open = base_url + "issue+state:open+label:\"feature%20request\""
     feature_request_closed = base_url + "issue+state:closed+label:\"feature%20request\""
 
@@ -98,22 +105,19 @@ def get_relevant_issues_info():
 
 def get_e2e_tests():
     _, _, files = next(os.walk("./././e2e/testcases"))
-    e2e_tests = len(files) - 1
-
-    return e2e_tests
+    return len(files) - 1
 
 def get_total_queries():
     total_queries = 0
     total_samples = 0
     for key, value in queries_path.items():
         metadata_path = os.path.join(value, 'metadata.json')
-        platform_count = sum([queries_count(path)
-                            for path in glob.glob(metadata_path)])
+        platform_count = sum(queries_count(path) for path in glob.glob(metadata_path))
         total_queries += platform_count
 
         for ext in samples_ext[key]:
             sample_path = os.path.join(value, 'test', f'*.{ext}')
-            ext_samples = len([path for path in glob.glob(sample_path)])
+            ext_samples = len(list(glob.glob(sample_path)))
 
             total_samples += ext_samples
 
@@ -128,9 +132,7 @@ def get_version(latest_realease_url):
     return version
 
 def get_date():
-    current_date = date.today().strftime("%Y/%m/%d")
-
-    return current_date
+    return date.today().strftime("%Y/%m/%d")
 
 
 parser = argparse.ArgumentParser(

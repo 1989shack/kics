@@ -12,14 +12,14 @@ from jinja2 import Environment
 def get_json(filename_list, command_dict):
     for filename in filename_list:
         filename = filename.strip("'")
-        print('Opening file {}'.format(filename))
+        print(f'Opening file {filename}')
         with open(filename) as json_file:
             data = json.load(json_file)
             extract_command = re.search(
                 '(\w+)-flags.json', filename, re.IGNORECASE)
             if not extract_command:
                 return
-            command = extract_command.group(1)
+            command = extract_command[1]
             command_dict[command] = data
 
 
@@ -28,8 +28,7 @@ def clean_dict(target):
 
 
 def prepare_template_data(new_json, old_json):
-    data = {}
-    data['added_commands'] = ', '.join(list(new_json.keys() - old_json.keys()))
+    data = {'added_commands': ', '.join(list(new_json.keys() - old_json.keys()))}
     data['removed_commands'] = ', '.join(
         list(old_json.keys() - new_json.keys()))
     common_commands = list(new_json.keys() & old_json.keys())
@@ -51,10 +50,11 @@ def prepare_template_data(new_json, old_json):
                 new_json[command][flag].keys() - old_json[command][flag].keys())
             data[command][flag]['removed_attributes'] = ', '.join(
                 list(old_json[command][flag].keys() - new_json[command][flag].keys()))
-            formatted_attrs = []
-            for added_attr in added_attributes:
-                formatted_attrs.append(
-                    f'{added_attr} = {new_json[command][flag][added_attr]}')
+            formatted_attrs = [
+                f'{added_attr} = {new_json[command][flag][added_attr]}'
+                for added_attr in added_attributes
+            ]
+
             data[command][flag]['added_attributes'] = ', '.join(
                 formatted_attrs)
             common_attr = list(
@@ -161,7 +161,7 @@ for email in email_distribution_list:
         print(e)
         error_sending.append(f"error sending email to {email} \n error :: {e}")
 
-if len(error_sending) > 0:
+if error_sending:
     print("### ERRORS SENDING EMAILS ###")
     send_email('rogerio.peixoto@checkmarx.com',
                'Daily Error Report', '</br>'.join(error_sending))
